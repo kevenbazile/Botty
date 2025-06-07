@@ -42,6 +42,12 @@ class LLMAnalyzer:
         print(f"   API Key loaded: {self.api_key is not None}")
         if self.api_key:
             print(f"   Key starts with: {self.api_key[:20]}...")
+            print(f"   Key length: {len(self.api_key)}")
+            # Validate API key format
+            if not self.api_key.startswith('sk-or-v1-'):
+                print("   ⚠️ WARNING: API key doesn't start with 'sk-or-v1-'")
+            else:
+                print("   ✅ API key format looks correct")
         
         self.base_url = "https://openrouter.ai/api/v1/chat/completions"
         
@@ -196,12 +202,15 @@ Focus on:
         return prompt
     
     def _call_llm(self, prompt: str) -> str:
-        """Make API call to OpenRouter"""
+        """Make API call to OpenRouter - FIXED AUTHENTICATION"""
         if not self.api_key:
             raise Exception("No OpenRouter API key available")
         
+        # Clean the API key - remove any whitespace
+        clean_api_key = self.api_key.strip()
+        
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {clean_api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://trading-bot.local",
             "X-Title": "Crypto Trading Bot"
@@ -215,31 +224,64 @@ Focus on:
                     "content": prompt
                 }
             ],
-            "temperature": 0.1,  # Very low temperature for consistent formatting
-            "max_tokens": 800,   # Reduced to encourage concise responses
+            "temperature": 0.1,
+            "max_tokens": 800,
             "top_p": 0.9
         }
         
         print(f"🤖 Calling OpenRouter API with model: {self.model}")
+        print(f"🔑 Using API key ending with: ...{clean_api_key[-8:]}")
         
-        response = requests.post(
-            self.base_url,
-            headers=headers,
-            json=data,
-            timeout=30
-        )
-        
-        print(f"🤖 OpenRouter response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            content = result['choices'][0]['message']['content']
-            # Clean the content immediately
-            return self._clean_response(content)
-        else:
-            error_text = response.text
-            print(f"❌ OpenRouter API Error Details: {error_text}")
-            raise Exception(f"OpenRouter API error: {response.status_code} - {error_text}")
+        try:
+            response = requests.post(
+                self.base_url,
+                headers=headers,
+                json=data,
+                timeout=30
+            )
+            
+            print(f"🤖 OpenRouter response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                return self._clean_response(content)
+            elif response.status_code == 401:
+                # Try alternative authentication method
+                print("🔄 Trying alternative API key format...")
+                
+                # Alternative headers format
+                alt_headers = {
+                    "Authorization": f"Bearer {clean_api_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "CryptoTradingBot/1.0"
+                }
+                
+                alt_response = requests.post(
+                    self.base_url,
+                    headers=alt_headers,
+                    json=data,
+                    timeout=30
+                )
+                
+                print(f"🤖 Alternative request status: {alt_response.status_code}")
+                
+                if alt_response.status_code == 200:
+                    result = alt_response.json()
+                    content = result['choices'][0]['message']['content']
+                    return self._clean_response(content)
+                else:
+                    error_text = alt_response.text
+                    print(f"❌ Alternative request also failed: {error_text}")
+                    raise Exception(f"OpenRouter API error: {alt_response.status_code} - {error_text}")
+            else:
+                error_text = response.text
+                print(f"❌ OpenRouter API Error Details: {error_text}")
+                raise Exception(f"OpenRouter API error: {response.status_code} - {error_text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Request exception: {e}")
+            raise Exception(f"OpenRouter API request failed: {str(e)}")
     
     def _parse_llm_response(self, response: str) -> Dict:
         """Parse LLM response and extract structured data"""
