@@ -43,7 +43,7 @@ class LLMAnalyzer:
         self.base_url = "https://openrouter.ai/api/v1/chat/completions"
         
         # Fixed model name - using valid OpenRouter model
-        self.model = "meta-llama/llama-3.1-8b-instruct:free"
+        self.model = "openai/codex-mini"
         
         if not self.api_key:
             print("❌ OPEN_ROUTER_KEY not found in environment variables")
