@@ -1,0 +1,13 @@
+services:
+  trading-bot:
+    build: .
+    container_name: trading-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app/app  # Mount local app directory for live code changes
+    environment:
+      - PYTHONUNBUFFERED=1  # Force Python to print output immediately

@@ -1,0 +1,59 @@
+pandas
+ccxt # For cryptocurrency exchange data
+yfinance 
+scikit-learn
+numpy
+matplotlib
+seaborn
+transformers # For NLP tasks
+torch # For deep learning tasks
+python-dotenv
+
+
+# Jesse-style dependencies
+plotly # For interactive charts
+dash # For web dashboard (optional)
+flask # For web interface
+mplfinance # For candlestick charts
+jupyter # For notebook analysis
+ipython # Enhanced Python shell
+
+# Additional dependencies for Jesse-style features
+scipy # For statistical calculations
+deap # For genetic algorithm optimization (optional)
+joblib # For parallel processing
+click # For CLI interfaces
+tabulate # For table formatting
+
+# LLM Integration dependencies
+requests # For API calls to OpenRouter
+openai # Optional: for direct OpenAI API integration
+anthropic # Optional: for direct Anthropic API integration
+
+# Financial News API Dependencies
+polygon-api-client # For Polygon.io financial news
+alpaca-trade-api # For Alpaca news and market data
+beautifulsoup4 # For web scraping financial news
+feedparser # For RSS feed parsing
+lxml # XML/HTML processing
+
+# Additional utilities for news processing
+python-dateutil # For date parsing
+regex # Enhanced regex support
+textblob # For basic sentiment analysis
+langdetect # For language detection
+nltk # Natural language processing toolkit
+
+# HTTP and async utilities
+httpx # Alternative HTTP client
+aiohttp # Async HTTP client
+requests-oauthlib # For OAuth authentication
+
+# Data processing and analysis
+pytz # Timezone handling
+dateparser # Flexible date parsing
+fuzzywuzzy # Fuzzy string matching for news deduplication
+
+# Optional: Enhanced charting and visualization
+bokeh # Interactive plotting
+altair # Statistical visualization
