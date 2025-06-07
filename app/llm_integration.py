@@ -57,6 +57,7 @@ class LLMAnalyzer:
         
         # Default model - try a different one
         self.model = "meta-llama/llama-3.2-3b-instruct:free"
+        self.api_working = False  # Track if API is working
         
         if not self.api_key:
             print("❌ OPEN_ROUTER_KEY not found in environment variables")
@@ -72,39 +73,58 @@ class LLMAnalyzer:
             
         try:
             print("🧪 Testing OpenRouter API key...")
+            print(f"🔑 API key ending with: ...{self.api_key[-12:]}")  # Show last 12 chars for debugging
             
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "TradingBot/1.0"
             }
             
             # Simple test request
             test_data = {
-                "model": self.model,
+                "model": "meta-llama/llama-3.2-3b-instruct:free",
                 "messages": [{"role": "user", "content": "Say 'Hello'"}],
                 "max_tokens": 10
             }
             
+            print(f"📤 Making request to: https://openrouter.ai/api/v1/chat/completions")
+            
             response = requests.post(
-                self.base_url,
+                "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
                 json=test_data,
                 timeout=10
             )
             
+            print(f"📥 Response status: {response.status_code}")
+            print(f"📥 Response content-type: {response.headers.get('content-type', 'unknown')}")
+            
+            # Check if we got HTML instead of JSON
+            if 'text/html' in response.headers.get('content-type', ''):
+                print("❌ ERROR: Received HTML response instead of JSON!")
+                print("❌ This usually means wrong endpoint or server error")
+                print(f"❌ First 500 chars of response: {response.text[:500]}")
+            else:
+                print(f"📥 Response body: {response.text}")
+            
             if response.status_code == 200:
                 print("✅ OpenRouter API key test successful!")
-            elif response.status_code == 401:
-                print("❌ OpenRouter API key test failed - Invalid credentials")
-                print(f"❌ Response: {response.text}")
-                # Try to get account info to debug
-                self._debug_api_key()
+                self.api_working = True
+                try:
+                    json_response = response.json()
+                    print(f"✅ Got valid JSON response: {json_response}")
+                except:
+                    print("❌ Response is not valid JSON")
+                    self.api_working = False
             else:
-                print(f"⚠️ OpenRouter API key test returned: {response.status_code}")
-                print(f"Response: {response.text}")
+                print("❌ OpenRouter API key test failed")
+                self.api_working = False
                 
         except Exception as e:
             print(f"❌ API key test error: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _debug_api_key(self):
         """Debug the API key by checking account info"""
@@ -131,9 +151,8 @@ class LLMAnalyzer:
     
     def analyze_market_sentiment(self, price_data: Dict, technical_analysis: Dict) -> Dict:
         """Get LLM analysis of market conditions"""
-        if not self.api_key:
-            print("❌ No OpenRouter API key available")
-            return {"analysis": "LLM not available - missing API key", "confidence": 0}
+        if not self.api_key or not getattr(self, 'api_working', False):
+            return {"analysis": "LLM not available", "confidence": 0}
         
         try:
             # Prepare market data for LLM
@@ -153,9 +172,8 @@ class LLMAnalyzer:
     
     def analyze_financial_news_sentiment(self, news_headlines: List[str], technical_analysis: Dict) -> Dict:
         """Enhanced analysis using financial news headlines"""
-        if not self.api_key:
-            print("❌ No OpenRouter API key available for financial news analysis")
-            return {"analysis": "Financial news analysis not available - missing API key", "confidence": 0}
+        if not self.api_key or not getattr(self, 'api_working', False):
+            return {"analysis": "Financial news analysis not available", "confidence": 0}
             
         if not news_headlines:
             return {"analysis": "No financial news headlines provided", "confidence": 0}
