@@ -36,6 +36,10 @@ class LLMAnalyzer:
         if not self.api_key:
             self.api_key = os.environ.get('OPEN_ROUTER_KEY')
         
+        # Clean the API key
+        if self.api_key:
+            self.api_key = self.api_key.strip().strip('"').strip("'")
+        
         # DEBUG: Print what we found
         print(f"🔑 OpenRouter API Key check:")
         print(f"   OPEN_ROUTER_KEY in env: {os.getenv('OPEN_ROUTER_KEY') is not None}")
@@ -51,12 +55,79 @@ class LLMAnalyzer:
         
         self.base_url = "https://openrouter.ai/api/v1/chat/completions"
         
-        # Default model
-        self.model = "anthropic/claude-3.5-sonnet"
+        # Default model - try a different one
+        self.model = "meta-llama/llama-3.2-3b-instruct:free"
         
         if not self.api_key:
             print("❌ OPEN_ROUTER_KEY not found in environment variables")
             print("❌ Make sure your .env file has: OPEN_ROUTER_KEY=sk-or-v1-...")
+        else:
+            # Test the API key immediately
+            self._test_api_key()
+    
+    def _test_api_key(self):
+        """Test the API key with a simple request"""
+        if not self.api_key:
+            return
+            
+        try:
+            print("🧪 Testing OpenRouter API key...")
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Simple test request
+            test_data = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": "Say 'Hello'"}],
+                "max_tokens": 10
+            }
+            
+            response = requests.post(
+                self.base_url,
+                headers=headers,
+                json=test_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                print("✅ OpenRouter API key test successful!")
+            elif response.status_code == 401:
+                print("❌ OpenRouter API key test failed - Invalid credentials")
+                print(f"❌ Response: {response.text}")
+                # Try to get account info to debug
+                self._debug_api_key()
+            else:
+                print(f"⚠️ OpenRouter API key test returned: {response.status_code}")
+                print(f"Response: {response.text}")
+                
+        except Exception as e:
+            print(f"❌ API key test error: {e}")
+    
+    def _debug_api_key(self):
+        """Debug the API key by checking account info"""
+        try:
+            print("🔍 Checking OpenRouter account info...")
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Check account balance/info
+            balance_url = "https://openrouter.ai/api/v1/account/balance"
+            response = requests.get(balance_url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"✅ Account balance: ${data.get('balance', 'unknown')}")
+            else:
+                print(f"❌ Account check failed: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            print(f"❌ Account debug error: {e}")
     
     def analyze_market_sentiment(self, price_data: Dict, technical_analysis: Dict) -> Dict:
         """Get LLM analysis of market conditions"""
