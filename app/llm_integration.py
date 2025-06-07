@@ -17,20 +17,46 @@ class LLMAnalyzer:
     """LLM-powered market analysis using OpenRouter with financial news integration"""
     
     def __init__(self):
-        load_dotenv()
+        # FORCE RELOAD THE .ENV FILE
+        load_dotenv(override=True)
+        
+        # TRY MULTIPLE WAYS TO GET THE API KEY
+        self.api_key = None
+        
+        # Method 1: Direct environment variable
         self.api_key = os.getenv('OPEN_ROUTER_KEY')
+        
+        # Method 2: Try alternative names
+        if not self.api_key:
+            self.api_key = os.getenv('OPENROUTER_API_KEY')
+        if not self.api_key:
+            self.api_key = os.getenv('OPENROUTER_KEY')
+        
+        # Method 3: Try from os.environ directly
+        if not self.api_key:
+            self.api_key = os.environ.get('OPEN_ROUTER_KEY')
+        
+        # DEBUG: Print what we found
+        print(f"🔑 OpenRouter API Key check:")
+        print(f"   OPEN_ROUTER_KEY in env: {os.getenv('OPEN_ROUTER_KEY') is not None}")
+        print(f"   API Key loaded: {self.api_key is not None}")
+        if self.api_key:
+            print(f"   Key starts with: {self.api_key[:20]}...")
+        
         self.base_url = "https://openrouter.ai/api/v1/chat/completions"
         
         # Default model
         self.model = "anthropic/claude-3.5-sonnet"
         
         if not self.api_key:
-            print("⚠️ OPEN_ROUTER_KEY not found in environment variables")
+            print("❌ OPEN_ROUTER_KEY not found in environment variables")
+            print("❌ Make sure your .env file has: OPEN_ROUTER_KEY=sk-or-v1-...")
     
     def analyze_market_sentiment(self, price_data: Dict, technical_analysis: Dict) -> Dict:
         """Get LLM analysis of market conditions"""
         if not self.api_key:
-            return {"analysis": "LLM not available", "confidence": 0}
+            print("❌ No OpenRouter API key available")
+            return {"analysis": "LLM not available - missing API key", "confidence": 0}
         
         try:
             # Prepare market data for LLM
@@ -50,8 +76,12 @@ class LLMAnalyzer:
     
     def analyze_financial_news_sentiment(self, news_headlines: List[str], technical_analysis: Dict) -> Dict:
         """Enhanced analysis using financial news headlines"""
-        if not self.api_key or not news_headlines:
-            return {"analysis": "Financial news analysis not available", "confidence": 0}
+        if not self.api_key:
+            print("❌ No OpenRouter API key available for financial news analysis")
+            return {"analysis": "Financial news analysis not available - missing API key", "confidence": 0}
+            
+        if not news_headlines:
+            return {"analysis": "No financial news headlines provided", "confidence": 0}
         
         try:
             # Create enhanced prompt with financial news data
@@ -167,6 +197,9 @@ Focus on:
     
     def _call_llm(self, prompt: str) -> str:
         """Make API call to OpenRouter"""
+        if not self.api_key:
+            raise Exception("No OpenRouter API key available")
+        
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -187,6 +220,8 @@ Focus on:
             "top_p": 0.9
         }
         
+        print(f"🤖 Calling OpenRouter API with model: {self.model}")
+        
         response = requests.post(
             self.base_url,
             headers=headers,
@@ -194,13 +229,17 @@ Focus on:
             timeout=30
         )
         
+        print(f"🤖 OpenRouter response status: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
             content = result['choices'][0]['message']['content']
             # Clean the content immediately
             return self._clean_response(content)
         else:
-            raise Exception(f"OpenRouter API error: {response.status_code} - {response.text}")
+            error_text = response.text
+            print(f"❌ OpenRouter API Error Details: {error_text}")
+            raise Exception(f"OpenRouter API error: {response.status_code} - {error_text}")
     
     def _parse_llm_response(self, response: str) -> Dict:
         """Parse LLM response and extract structured data"""
