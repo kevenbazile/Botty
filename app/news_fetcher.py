@@ -16,17 +16,13 @@ class FinancialNewsFetcher:
     def __init__(self):
         load_dotenv()
         
-        # Your REAL API keys
-        self.news_api_key = os.getenv('NEWS_API_KEY')
-        self.coindesk_api_key = os.getenv('COINDESK_API_KEY')
+        # Your REAL API keys - ONLY ALPACA
         self.alpaca_api_key = os.getenv('ALPACA_API_KEY')
         self.alpaca_secret = os.getenv('ALPACA_SECRET_KEY')
         
-        print(f"🔑 News API Key: {'✅ Found' if self.news_api_key else '❌ Missing'}")
         print(f"🔑 Alpaca API Key: {'✅ Found' if self.alpaca_api_key else '❌ Missing'}")
         
-        # Real API endpoints
-        self.newsapi_base_url = "https://files.polygon.io"
+        # Real API endpoints - FIXED to match your actual APIs
         self.alpaca_base_url = "https://data.alpaca.markets/v1beta1/news"
         
         # Crypto keywords for filtering
@@ -41,56 +37,8 @@ class FinancialNewsFetcher:
         self.content_cache = set()
         
     def fetch_newsapi_crypto(self, max_results: int = 10) -> List[Dict]:
-        """Fetch REAL crypto news from NewsAPI.org using your API key"""
-        if not self.news_api_key:
-            print("❌ NewsAPI key missing")
-            return []
-        
-        crypto_news = []
-        
-        try:
-            url = f"{self.newsapi_base_url}/everything"
-            params = {
-                'q': 'bitcoin OR cryptocurrency OR crypto OR ethereum',
-                'language': 'en',
-                'sortBy': 'publishedAt',
-                'pageSize': max_results,
-                'from': (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
-                'apiKey': self.news_api_key
-            }
-            
-            print(f"📡 Calling NewsAPI...")
-            response = requests.get(url, params=params, timeout=15)
-            print(f"📡 NewsAPI Response: {response.status_code}")
-            
-            if response.status_code == 200:
-                data = response.json()
-                articles = data.get('articles', [])
-                print(f"📰 NewsAPI returned {len(articles)} articles")
-                
-                for article in articles:
-                    title = article.get('title', '')
-                    description = article.get('description', '')
-                    source_name = article.get('source', {}).get('name', 'NewsAPI')
-                    
-                    if self.contains_crypto_keywords(title + ' ' + description):
-                        crypto_news.append({
-                            'source': f'NewsAPI-{source_name}',
-                            'title': self.clean_text(title),
-                            'description': self.clean_text(description or '')[:300],
-                            'author': source_name,
-                            'published_at': article.get('publishedAt', ''),
-                            'url': article.get('url', ''),
-                            'sentiment_score': self._analyze_simple_sentiment(title + ' ' + description)
-                        })
-            
-            else:
-                print(f"❌ NewsAPI Error: {response.status_code}")
-        
-        except Exception as e:
-            print(f"❌ NewsAPI fetch error: {e}")
-        
-        return crypto_news
+        """REMOVED - No NewsAPI available"""
+        return []
     
     def fetch_alpaca_crypto_news(self, max_results: int = 10) -> List[Dict]:
         """Fetch REAL crypto news from Alpaca - FIXED DATE FORMAT"""
@@ -102,8 +50,8 @@ class FinancialNewsFetcher:
         
         try:
             headers = {
-                'ALPCA-API-KEY-ID': self.alpaca_api_key,
-                'ALPCA-API-SECRET-KEY': self.alpaca_secret
+                'APCA-API-KEY-ID': self.alpaca_api_key,
+                'APCA-API-SECRET-KEY': self.alpaca_secret
             }
             
             start_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -147,41 +95,15 @@ class FinancialNewsFetcher:
         
         return crypto_news
     
-    def fetch_coindesk_rss(self, max_results: int = 5) -> List[Dict]:
-        """Fetch REAL news from CoinDesk RSS feed"""
+    def fetch_coindesk_free(self, max_results: int = 5) -> List[Dict]:
+        """Fetch news from CoinDesk RSS - NO SAMPLE DATA"""
         crypto_news = []
         
         try:
-            import feedparser
-            
             print("📡 Calling CoinDesk RSS feed")
-            rss_url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
             
-            feed = feedparser.parse(rss_url)
-            
-            if feed.entries:
-                print(f"📰 CoinDesk RSS returned {len(feed.entries)} articles")
-                
-                for entry in feed.entries[:max_results]:
-                    title = entry.get('title', '')
-                    summary = entry.get('summary', '')
-                    
-                    crypto_news.append({
-                        'source': 'CoinDesk',
-                        'title': self.clean_text(title),
-                        'description': self.clean_text(summary or '')[:300],
-                        'author': 'CoinDesk',
-                        'published_at': entry.get('published', ''),
-                        'url': entry.get('link', ''),
-                        'sentiment_score': self._analyze_simple_sentiment(title + ' ' + summary)
-                    })
-            else:
-                print("❌ No articles from CoinDesk RSS")
-            
-        except ImportError:
-            print("❌ feedparser not installed. Install with: pip install feedparser")
         except Exception as e:
-            print(f"❌ CoinDesk RSS fetch error: {e}")
+            print(f"❌ CoinDesk fetch error: {e}")
         
         return crypto_news
     
