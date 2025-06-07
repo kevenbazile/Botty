@@ -26,7 +26,7 @@ class FinancialNewsFetcher:
         print(f"🔑 Alpaca API Key: {'✅ Found' if self.alpaca_api_key else '❌ Missing'}")
         
         # Real API endpoints
-        self.newsapi_base_url = "NEWS_API_KEY"
+        self.newsapi_base_url = "https://files.polygon.io"
         self.alpaca_base_url = "https://data.alpaca.markets/v1beta1/news"
         
         # Crypto keywords for filtering
