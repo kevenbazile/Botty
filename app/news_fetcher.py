@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import re
 
 class FinancialNewsFetcher:
-    """Fetch REAL crypto news using your actual API keys"""
+    """Fetch REAL crypto news using your actual API keys""" 
     
     def __init__(self):
         load_dotenv()
