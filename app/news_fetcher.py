@@ -1,4 +1,4 @@
-# COMPLETE FIXED news_fetcher.py
+# FIXED: Use simple date format that Alpaca accepts# COMPLETE FIXED news_fetcher.py - REAL API CALLS ONLY
 # File: PS C:\Users\kille\Desktop\bot\app\news_fetcher.py
 
 import os
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import re
 
 class FinancialNewsFetcher:
-    """Fetch REAL crypto news using your actual API keys - FIXED VERSION"""
+    """Fetch REAL crypto news using your actual API keys - NO SAMPLE DATA"""
     
     def __init__(self):
         load_dotenv()
@@ -102,11 +102,10 @@ class FinancialNewsFetcher:
         
         try:
             headers = {
-                'APCA-API-KEY-ID': self.alpaca_api_key,
-                'APCA-API-SECRET-KEY': self.alpaca_secret
+                'ALPCA-API-KEY-ID': self.alpaca_api_key,
+                'ALPCA-API-SECRET-KEY': self.alpaca_secret
             }
             
-            # FIXED: Use simple date format that Alpaca accepts
             start_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
             
             params = {
@@ -148,42 +147,41 @@ class FinancialNewsFetcher:
         
         return crypto_news
     
-    def fetch_coindesk_free(self, max_results: int = 5) -> List[Dict]:
-        """Fetch news from CoinDesk free RSS"""
+    def fetch_coindesk_rss(self, max_results: int = 5) -> List[Dict]:
+        """Fetch REAL news from CoinDesk RSS feed"""
         crypto_news = []
         
         try:
+            import feedparser
+            
             print("📡 Calling CoinDesk RSS feed")
+            rss_url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
             
-            # Generate some realistic crypto news for now
-            current_time = datetime.now()
+            feed = feedparser.parse(rss_url)
             
-            sample_news = [
-                {
-                    'source': 'CoinDesk',
-                    'title': 'Bitcoin Price Shows Consolidation Pattern Above Key Support',
-                    'description': 'Technical analysis indicates Bitcoin maintaining strength above $100K level',
-                    'author': 'CoinDesk',
-                    'published_at': current_time.isoformat(),
-                    'url': 'https://coindesk.com',
-                    'sentiment_score': 0.2
-                },
-                {
-                    'source': 'CoinDesk',
-                    'title': 'Institutional Crypto Adoption Accelerates in Q2 2025',
-                    'description': 'Major financial institutions continue expanding digital asset offerings',
-                    'author': 'CoinDesk',
-                    'published_at': current_time.isoformat(),
-                    'url': 'https://coindesk.com',
-                    'sentiment_score': 0.3
-                }
-            ]
+            if feed.entries:
+                print(f"📰 CoinDesk RSS returned {len(feed.entries)} articles")
+                
+                for entry in feed.entries[:max_results]:
+                    title = entry.get('title', '')
+                    summary = entry.get('summary', '')
+                    
+                    crypto_news.append({
+                        'source': 'CoinDesk',
+                        'title': self.clean_text(title),
+                        'description': self.clean_text(summary or '')[:300],
+                        'author': 'CoinDesk',
+                        'published_at': entry.get('published', ''),
+                        'url': entry.get('link', ''),
+                        'sentiment_score': self._analyze_simple_sentiment(title + ' ' + summary)
+                    })
+            else:
+                print("❌ No articles from CoinDesk RSS")
             
-            crypto_news.extend(sample_news[:max_results])
-            print(f"📰 CoinDesk generated {len(crypto_news)} articles")
-            
+        except ImportError:
+            print("❌ feedparser not installed. Install with: pip install feedparser")
         except Exception as e:
-            print(f"❌ CoinDesk fetch error: {e}")
+            print(f"❌ CoinDesk RSS fetch error: {e}")
         
         return crypto_news
     
@@ -230,7 +228,7 @@ class FinancialNewsFetcher:
         all_news = []
         headlines = []
         
-        # Fetch from NewsAPI (most reliable)
+        # Fetch from NewsAPI
         try:
             newsapi_news = self.fetch_newsapi_crypto(max_per_source)
             all_news.extend(newsapi_news)
