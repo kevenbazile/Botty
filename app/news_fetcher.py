@@ -59,8 +59,7 @@ class FinancialNewsFetcher:
             params = {
                 'symbols': 'BTCUSD',
                 'start': start_date,
-                'sort': 'desc',
-                'page_size': min(max_results, 10)
+                'sort': 'desc'
             }
             
             print(f"📡 Calling Alpaca API with date: {start_date}")
@@ -96,11 +95,12 @@ class FinancialNewsFetcher:
         return crypto_news
     
     def fetch_coindesk_free(self, max_results: int = 5) -> List[Dict]:
-        """Fetch news from CoinDesk RSS - NO SAMPLE DATA"""
+        """Fetch news from CoinDesk RSS - matches existing code structure"""
         crypto_news = []
         
         try:
             print("📡 Calling CoinDesk RSS feed")
+            # Keep empty as per your existing structure
             
         except Exception as e:
             print(f"❌ CoinDesk fetch error: {e}")
