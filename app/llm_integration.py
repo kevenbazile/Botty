@@ -40,119 +40,19 @@ class LLMAnalyzer:
         if self.api_key:
             self.api_key = self.api_key.strip().strip('"').strip("'")
         
-        # DEBUG: Print what we found
-        print(f"🔑 OpenRouter API Key check:")
-        print(f"   OPEN_ROUTER_KEY in env: {os.getenv('OPEN_ROUTER_KEY') is not None}")
-        print(f"   API Key loaded: {self.api_key is not None}")
-        if self.api_key:
-            print(f"   Key starts with: {self.api_key[:20]}...")
-            print(f"   Key length: {len(self.api_key)}")
-            # Validate API key format
-            if not self.api_key.startswith('sk-or-v1-'):
-                print("   ⚠️ WARNING: API key doesn't start with 'sk-or-v1-'")
-            else:
-                print("   ✅ API key format looks correct")
-        
         self.base_url = "https://openrouter.ai/api/v1/chat/completions"
         
-        # Default model - try a different one
-        self.model = "meta-llama/llama-3.2-3b-instruct:free"
-        self.api_working = False  # Track if API is working
+        # Fixed model name - using valid OpenRouter model
+        self.model = "meta-llama/llama-3.1-8b-instruct:free"
         
         if not self.api_key:
             print("❌ OPEN_ROUTER_KEY not found in environment variables")
             print("❌ Make sure your .env file has: OPEN_ROUTER_KEY=sk-or-v1-...")
-        else:
-            # Test the API key immediately
-            self._test_api_key()
-    
-    def _test_api_key(self):
-        """Test the API key with a simple request"""
-        if not self.api_key:
-            return
-            
-        try:
-            print("🧪 Testing OpenRouter API key...")
-            print(f"🔑 API key ending with: ...{self.api_key[-12:]}")  # Show last 12 chars for debugging
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": "TradingBot/1.0"
-            }
-            
-            # Simple test request
-            test_data = {
-                "model": "meta-llama/llama-3.2-3b-instruct:free",
-                "messages": [{"role": "user", "content": "Say 'Hello'"}],
-                "max_tokens": 10
-            }
-            
-            print(f"📤 Making request to: https://openrouter.ai/api/v1/chat/completions")
-            
-            response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers=headers,
-                json=test_data,
-                timeout=10
-            )
-            
-            print(f"📥 Response status: {response.status_code}")
-            print(f"📥 Response content-type: {response.headers.get('content-type', 'unknown')}")
-            
-            # Check if we got HTML instead of JSON
-            if 'text/html' in response.headers.get('content-type', ''):
-                print("❌ ERROR: Received HTML response instead of JSON!")
-                print("❌ This usually means wrong endpoint or server error")
-                print(f"❌ First 500 chars of response: {response.text[:500]}")
-            else:
-                print(f"📥 Response body: {response.text}")
-            
-            if response.status_code == 200:
-                print("✅ OpenRouter API key test successful!")
-                self.api_working = True
-                try:
-                    json_response = response.json()
-                    print(f"✅ Got valid JSON response: {json_response}")
-                except:
-                    print("❌ Response is not valid JSON")
-                    self.api_working = False
-            else:
-                print("❌ OpenRouter API key test failed")
-                self.api_working = False
-                
-        except Exception as e:
-            print(f"❌ API key test error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def _debug_api_key(self):
-        """Debug the API key by checking account info"""
-        try:
-            print("🔍 Checking OpenRouter account info...")
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            # Check account balance/info
-            balance_url = "https://openrouter.ai/api/v1/account/balance"
-            response = requests.get(balance_url, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                print(f"✅ Account balance: ${data.get('balance', 'unknown')}")
-            else:
-                print(f"❌ Account check failed: {response.status_code} - {response.text}")
-                
-        except Exception as e:
-            print(f"❌ Account debug error: {e}")
     
     def analyze_market_sentiment(self, price_data: Dict, technical_analysis: Dict) -> Dict:
         """Get LLM analysis of market conditions"""
-        if not self.api_key or not getattr(self, 'api_working', False):
-            return {"analysis": "LLM not available", "confidence": 0}
+        if not self.api_key:
+            return {"analysis": "LLM not available - missing API key", "confidence": 0}
         
         try:
             # Prepare market data for LLM
@@ -172,8 +72,8 @@ class LLMAnalyzer:
     
     def analyze_financial_news_sentiment(self, news_headlines: List[str], technical_analysis: Dict) -> Dict:
         """Enhanced analysis using financial news headlines"""
-        if not self.api_key or not getattr(self, 'api_working', False):
-            return {"analysis": "Financial news analysis not available", "confidence": 0}
+        if not self.api_key:
+            return {"analysis": "Financial news analysis not available - missing API key", "confidence": 0}
             
         if not news_headlines:
             return {"analysis": "No financial news headlines provided", "confidence": 0}
@@ -291,7 +191,7 @@ Focus on:
         return prompt
     
     def _call_llm(self, prompt: str) -> str:
-        """Make API call to OpenRouter - FIXED AUTHENTICATION"""
+        """Make API call to OpenRouter"""
         if not self.api_key:
             raise Exception("No OpenRouter API key available")
         
@@ -318,9 +218,6 @@ Focus on:
             "top_p": 0.9
         }
         
-        print(f"🤖 Calling OpenRouter API with model: {self.model}")
-        print(f"🔑 Using API key ending with: ...{clean_api_key[-8:]}")
-        
         try:
             response = requests.post(
                 self.base_url,
@@ -329,17 +226,12 @@ Focus on:
                 timeout=30
             )
             
-            print(f"🤖 OpenRouter response status: {response.status_code}")
-            
             if response.status_code == 200:
                 result = response.json()
                 content = result['choices'][0]['message']['content']
                 return self._clean_response(content)
             elif response.status_code == 401:
                 # Try alternative authentication method
-                print("🔄 Trying alternative API key format...")
-                
-                # Alternative headers format
                 alt_headers = {
                     "Authorization": f"Bearer {clean_api_key}",
                     "Content-Type": "application/json",
@@ -353,23 +245,18 @@ Focus on:
                     timeout=30
                 )
                 
-                print(f"🤖 Alternative request status: {alt_response.status_code}")
-                
                 if alt_response.status_code == 200:
                     result = alt_response.json()
                     content = result['choices'][0]['message']['content']
                     return self._clean_response(content)
                 else:
                     error_text = alt_response.text
-                    print(f"❌ Alternative request also failed: {error_text}")
                     raise Exception(f"OpenRouter API error: {alt_response.status_code} - {error_text}")
             else:
                 error_text = response.text
-                print(f"❌ OpenRouter API Error Details: {error_text}")
                 raise Exception(f"OpenRouter API error: {response.status_code} - {error_text}")
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request exception: {e}")
             raise Exception(f"OpenRouter API request failed: {str(e)}")
     
     def _parse_llm_response(self, response: str) -> Dict:
